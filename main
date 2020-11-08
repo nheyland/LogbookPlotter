@@ -1,0 +1,69 @@
+import folium as f
+import pandas as pd
+
+fileName = 'https://datahub.io/core/airport-codes/r/airport-codes.csv'
+flightsTable = 45
+
+def split(combo):
+    return [char for char in combo]
+
+bounds = [(26, -65),(50, -129)]
+
+map = f.Map(tiles="CartoDB positron")
+map.fit_bounds(bounds)
+
+airport_code = pd.read_csv(fileName, index_col='ident', usecols=['ident', 'coordinates'])
+
+logbook = pd.read_csv(r'logbook_2020-11-08_00-43-01.csv', skiprows=flightsTable, usecols=[2, 3, 4]).fillna('0')
+
+airport_list = []
+
+logfrom = logbook['From'].tolist()
+logto = logbook['To'].tolist()
+logroute = logbook['Route'].tolist()
+
+logroute = pd.Series(logroute).str.split().explode().tolist()
+
+log = logto + logfrom + logroute
+
+log = list((dict.fromkeys(log)))
+
+log.remove('0')
+
+newlog = []
+
+for i in range(0, len(log)):
+    x = split(log[i])
+
+    if len(x) == 3:
+        x.insert(0, 'K')
+        x = ''.join(x)
+    else:
+        x = ''.join(x)
+
+    newlog.append(x)
+for i in range(0, len(newlog)):
+    try:
+        airport = newlog[i]
+
+        ap = airport_code.loc[airport]
+
+        coord = ap[0].split(',')
+        long = coord[0]
+        lat = coord[1]
+        print(airport)
+        print(lat)
+        print(long)
+
+        f.CircleMarker(
+            location=(lat, long),
+            radius=10,
+            popup=airport,
+            color='green',
+            fill=True,
+            fill_color='#05e2ff'
+        ).add_to(map)
+    except KeyError:
+        pass
+
+map.save('Map.html')
